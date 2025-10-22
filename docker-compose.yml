@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/convosearch
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - S3_BUCKET=local
+      - LLM_API_KEY=demo-key-for-mvp
+    depends_on:
+      - db
+      - chroma
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: >
+      sh -c "sleep 10 &&
+             python scripts/init_db.py &&
+             python scripts/seed_docs.py &&
+             uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=convosearch
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chroma:
+    image: chromadb/chroma:0.4.15
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  chroma_data:

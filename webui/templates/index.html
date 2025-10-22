@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConvoSearch - Customer Support Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ConvoSearch</h1>
+            <p>RAG-powered Customer Support Insights & Auto-Ticket Triage</p>
+        </div>
+        
+        <div class="nav">
+            <a href="/chat">🔍 Knowledge Base Chat</a>
+            <a href="/triage">🚨 Message Triage</a>
+            <a href="/api/tickets" target="_blank">📋 View Tickets (API)</a>
+        </div>
+        
+        <div class="card">
+            <h3>🎯 MVP Demo Features</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                <div>
+                    <h4>📚 Document Intelligence</h4>
+                    <ul>
+                        <li>Upload and query knowledge base</li>
+                        <li>Smart document parsing</li>
+                        <li>Source citation and provenance</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>🤖 Auto-Triage</h4>
+                    <ul>
+                        <li>Message classification</li>
+                        <li>Confidence scoring</li>
+                        <li>Routing recommendations</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>💡 Smart Replies</h4>
+                    <ul>
+                        <li>Context-aware suggestions</li>
+                        <li>Agent productivity tools</li>
+                        <li>Ticket creation workflow</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🚀 Quick Demo Instructions</h3>
+            <ol>
+                <li><strong>Knowledge Base Chat:</strong> Ask questions like "How do I reset my password?" or "What are your business hours?"</li>
+                <li><strong>Message Triage:</strong> Paste customer messages to see auto-classification and suggested replies</li>
+                <li><strong>Ticket Creation:</strong> Create tickets with pre-filled classification and replies</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h3>📊 System Status</h3>
+            <div id="systemStatus">
+                <p>Checking system status...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check system status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                document.getElementById('systemStatus').innerHTML = `
+                    <div class="status success">
+                        ✅ System Status: <strong>${data.status}</strong> | Service: ${data.service}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('systemStatus').innerHTML = `
+                    <div class="status error">
+                        ❌ System Status: <strong>Unavailable</strong> - Please check if services are running
+                    </div>
+                `;
+            }
+        }
+
+        checkStatus();
+        setInterval(checkStatus, 30000); // Check every 30 seconds
+    </script>
+</body>
+</html>

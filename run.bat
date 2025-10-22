@@ -1,0 +1,3 @@
+@echo off
+echo Starting ConvoSearch services...
+docker-compose up

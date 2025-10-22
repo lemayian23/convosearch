@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ConvoSearch - Message Triage</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .classification { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .bot { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .tier1 { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .escalate { background: #ffebee; border-left: 4px solid #f44336; }
+        textarea, button { padding: 10px; margin: 5px; }
+        .suggested-reply { background: #f9f9f9; padding: 15px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Auto-Triage System</h2>
+        
+        <div class="card">
+            <h3>Paste Customer Message</h3>
+            <textarea id="messageInput" placeholder="Enter customer message here..." style="width: 100%; height: 100px;"></textarea>
+            <button onclick="triageMessage()">Analyze & Triage</button>
+        </div>
+        
+        <div id="results" style="display: none;">
+            <div class="card">
+                <h3>Triage Results</h3>
+                <div id="classificationResult" class="classification"></div>
+                
+                <h4>Suggested Reply</h4>
+                <div id="suggestedReply" class="suggested-reply"></div>
+                
+                <button onclick="createTicket()">Create Ticket</button>
+                <span id="ticketStatus" style="margin-left: 10px;"></span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <a href="/">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = null;
+        
+        async function triageMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            try {
+                const response = await fetch('/api/triage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                currentResults = data;
+                
+                // Display classification
+                const classificationDiv = document.getElementById('classificationResult');
+                const confidencePercent = (data.confidence * 100).toFixed(1);
+                
+                classificationDiv.className = `classification ${data.classification}`;
+                classificationDiv.innerHTML = `
+                    <strong>Classification:</strong> ${data.classification.toUpperCase()} 
+                    | <strong>Confidence:</strong> ${confidencePercent}%
+                `;
+                
+                // Display suggested reply
+                document.getElementById('suggestedReply').textContent = data.suggested_reply;
+                
+                // Show results
+                document.getElementById('results').style.display = 'block';
+                
+            } catch (error) {
+                alert('Error analyzing message');
+            }
+        }
+        
+        async function createTicket() {
+            if (!currentResults) return;
+            
+            try {
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_message: document.getElementById('messageInput').value,
+                        classification: currentResults.classification,
+                        suggested_reply: currentResults.suggested_reply
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('ticketStatus').innerHTML = 
+                    `<strong>✓ Ticket Created:</strong> ${data.ticket_id}`;
+                    
+            } catch (error) {
+                alert('Error creating ticket');
+            }
+        }
+    </script>
+</body>
+</html>
