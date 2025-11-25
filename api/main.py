@@ -10,6 +10,86 @@ import uvicorn
 import os
 import sys
 
+# Add these imports at the top if not already present
+from datetime import datetime
+from typing import Optional, List
+
+# Update your existing search endpoint or add a new one
+@app.post("/api/search")
+async def search_queries(
+    query: str = Body(..., embed=True),
+    category_filter: Optional[str] = Body(None),
+    date_filter: Optional[str] = Body(None),
+    limit: int = Body(10)
+):
+    """
+    Search queries with filtering options
+    """
+    try:
+        # Build filter criteria
+        filter_criteria = {}
+        
+        if category_filter and category_filter != "all":
+            filter_criteria["category"] = category_filter
+            
+        if date_filter and date_filter != "all":
+            # Handle different date filter options
+            if date_filter == "today":
+                start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                filter_criteria["date_from"] = start_date
+            elif date_filter == "week":
+                start_date = datetime.now() - timedelta(days=7)
+                filter_criteria["date_from"] = start_date
+            elif date_filter == "month":
+                start_date = datetime.now() - timedelta(days=30)
+                filter_criteria["date_from"] = start_date
+            # Add more date filters as needed
+        
+        # Use your existing RAG engine with filters
+        results = await rag_engine.search(
+            query=query,
+            filter_criteria=filter_criteria,
+            limit=limit
+        )
+        
+        return {
+            "success": True,
+            "results": results,
+            "query": query,
+            "filters": {
+                "category": category_filter,
+                "date": date_filter
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Search error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "results": []
+        }
+
+@app.get("/api/categories")
+async def get_categories():
+    """
+    Get available categories for filtering
+    """
+    try:
+        # This should query your database for distinct categories
+        categories = await ticket_manager.get_categories()
+        return {
+            "success": True,
+            "categories": categories
+        }
+    except Exception as e:
+        logger.error(f"Categories error: {str(e)}")
+        return {
+            "success": False,
+            "categories": [],
+            "error": str(e)
+        }
+
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

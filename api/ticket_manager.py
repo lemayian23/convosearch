@@ -3,6 +3,19 @@ import os
 from datetime import datetime
 from typing import Dict, Any
 
+async def get_categories(self):
+    """
+    Retrieve distinct categories from the database
+    """
+    try:
+        # Assuming you're using MongoDB
+        categories = await self.collection.distinct("category")
+        return [cat for cat in categories if cat]  # Filter out None values
+        
+    except Exception as e:
+        logger.error(f"Error fetching categories: {str(e)}")
+        return []
+
 
 class TicketManager:
     def __init__(self):

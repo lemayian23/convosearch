@@ -66,3 +66,37 @@ class RAGEngine:
         # Sort by confidence and return top 3
         all_sources.sort(key=lambda x: x["confidence"], reverse=True)
         return [source["content"] for source in all_sources[:3]]
+
+        async def search(
+    self, 
+    query: str, 
+    filter_criteria: Optional[dict] = None,
+    limit: int = 10
+):
+    """
+    Enhanced search with filtering
+    """
+    try:
+        # Your existing embedding and search logic
+        query_embedding = await self.embedder.embed_query(query)
+        
+        # Apply filters to your vector search
+        search_filters = {}
+        if filter_criteria:
+            if "category" in filter_criteria:
+                search_filters["category"] = filter_criteria["category"]
+            if "date_from" in filter_criteria:
+                search_filters["date"] = {"$gte": filter_criteria["date_from"]}
+        
+        # Modify your vector store query to include filters
+        results = await self.vector_store.similarity_search(
+            query_embedding, 
+            k=limit,
+            filter=search_filters if search_filters else None
+        )
+        
+        return self._format_results(results)
+        
+    except Exception as e:
+        logger.error(f"RAG search error: {str(e)}")
+        raise
