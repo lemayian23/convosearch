@@ -81,6 +81,35 @@
                 askQuestion();
             }
         });
+        <!-- Add this section where you want the filters to appear -->
+<div class="search-filters">
+    <div class="filter-group">
+        <label for="categoryFilter">Category:</label>
+        <select id="categoryFilter" class="filter-select">
+            <option value="all">All Categories</option>
+            <!-- Categories will be populated dynamically -->
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label for="dateFilter">Date:</label>
+        <select id="dateFilter" class="filter-select">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">Past Week</option>
+            <option value="month">Past Month</option>
+            <option value="custom">Custom Range</option>
+        </select>
+    </div>
+    
+    <!-- Custom date range (hidden by default) -->
+    <div id="customDateRange" class="filter-group" style="display: none;">
+        <label for="startDate">From:</label>
+        <input type="date" id="startDate" class="date-input">
+        <label for="endDate">To:</label>
+        <input type="date" id="endDate" class="date-input">
+    </div>
+</div>
     </script>
 </body>
 </html>
