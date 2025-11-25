@@ -3,6 +3,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import os
+from fastapi.staticfiles import StaticFiles
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="webui/static"), name="static")
 
 app = FastAPI(title="ConvoSearch WebUI")
 
