@@ -1,4 +1,4 @@
-// Filter state management
+// Filter state management - tracks current filter selections
 let currentFilters = {
     category: 'all',
     date: 'all',
@@ -6,13 +6,19 @@ let currentFilters = {
     endDate: null
 };
 
-// Initialize filters
+// Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
-    setupFilterListeners();
+    initializeApp();
 });
 
-// Load categories from backend
+async function initializeApp() {
+    // Load available categories from the backend API
+    await loadCategories();
+    // Set up event listeners for filter interactions
+    setupFilterListeners();
+}
+
+// Fetch available categories from the backend and populate the dropdown
 async function loadCategories() {
     try {
         const response = await fetch('/api/categories');
@@ -20,6 +26,9 @@ async function loadCategories() {
         
         if (data.success) {
             const categorySelect = document.getElementById('categoryFilter');
+            // Clear existing options except "All Categories"
+            categorySelect.innerHTML = '<option value="all">All Categories</option>';
+            // Add categories to the dropdown menu
             data.categories.forEach(category => {
                 const option = document.createElement('option');
                 option.value = category;
@@ -29,161 +38,213 @@ async function loadCategories() {
         }
     } catch (error) {
         console.error('Error loading categories:', error);
+        // If categories fail to load, the filter will still work with "All Categories"
     }
 }
 
-// Setup filter event listeners
+// Set up event listeners for filter controls
 function setupFilterListeners() {
     const categoryFilter = document.getElementById('categoryFilter');
     const dateFilter = document.getElementById('dateFilter');
     const customDateRange = document.getElementById('customDateRange');
     
+    if (!categoryFilter || !dateFilter) {
+        console.error('Filter elements not found');
+        return;
+    }
+    
+    // Category filter change handler
     categoryFilter.addEventListener('change', function() {
         currentFilters.category = this.value;
+        // Apply filters immediately when they change
         applyFilters();
     });
     
+    // Date filter change handler
     dateFilter.addEventListener('change', function() {
         currentFilters.date = this.value;
         
-        // Show/hide custom date range
+        // Show custom date range inputs only when custom is selected
         if (this.value === 'custom') {
             customDateRange.style.display = 'flex';
         } else {
             customDateRange.style.display = 'none';
             currentFilters.startDate = null;
             currentFilters.endDate = null;
+            // Apply filters immediately for preset date ranges
             applyFilters();
         }
     });
     
-    // Custom date range listeners
-    document.getElementById('startDate').addEventListener('change', updateCustomDate);
-    document.getElementById('endDate').addEventListener('change', updateCustomDate);
+    // Custom date range change handlers
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    if (startDate) startDate.addEventListener('change', updateCustomDate);
+    if (endDate) endDate.addEventListener('change', updateCustomDate);
 }
 
+// Handle custom date range selection
 function updateCustomDate() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
     
     if (startDate && endDate) {
-        currentFilters.startDate = startDate;
-        currentFilters.endDate = endDate;
-        applyFilters();
+        currentFilters.startDate = startDate.value;
+        currentFilters.endDate = endDate.value;
+        
+        // Only apply filters when both dates are selected
+        if (startDate.value && endDate.value) {
+            applyFilters();
+        }
     }
 }
 
-// Apply filters to current search or perform new search
+// Apply current filters to any active search
 function applyFilters() {
-    // If there's a current search query, re-search with filters
-    const currentQuery = document.getElementById('searchInput').value;
-    if (currentQuery.trim()) {
-        performSearch(currentQuery);
+    // If there's a current question, re-run the search with filters
+    const currentQuestion = document.getElementById('questionInput').value;
+    if (currentQuestion && currentQuestion.trim()) {
+        askQuestion();
     }
     
-    // Update UI to show active filters
+    // Update UI to show active filter state
     updateFilterUI();
 }
 
-// Update UI to reflect active filters
+// Update visual indication of active filters
 function updateFilterUI() {
     const hasActiveFilters = currentFilters.category !== 'all' || 
                             currentFilters.date !== 'all' ||
                             currentFilters.startDate !== null;
     
     const filterContainer = document.querySelector('.search-filters');
-    if (hasActiveFilters) {
-        filterContainer.classList.add('filter-active');
-    } else {
-        filterContainer.classList.remove('filter-active');
+    if (filterContainer) {
+        if (hasActiveFilters) {
+            filterContainer.classList.add('filter-active');
+        } else {
+            filterContainer.classList.remove('filter-active');
+        }
     }
 }
 
-// Modify your existing search function to include filters
-async function performSearch(query) {
+// Main function to ask questions with filter support - MODIFIED VERSION
+async function askQuestion() {
+    const input = document.getElementById('questionInput');
+    const question = input.value.trim();
+    if (!question) return;
+    
+    const chatBox = document.getElementById('chatBox');
+    
+    // Add user message to chat
+    chatBox.innerHTML += `<div class="message user"><strong>You:</strong> ${question}</div>`;
+    input.value = '';
+    
+    // Show loading state
+    showLoading(true);
+    
     try {
-        showLoading(true);
-        
-        const searchData = {
-            query: query,
+        // Prepare request data with current filters
+        const requestData = {
+            question: question,
             category_filter: currentFilters.category,
             date_filter: currentFilters.date
         };
         
-        // Add custom date range if applicable
+        // Add custom date range if selected
         if (currentFilters.date === 'custom' && currentFilters.startDate && currentFilters.endDate) {
-            searchData.start_date = currentFilters.startDate;
-            searchData.end_date = currentFilters.endDate;
+            requestData.start_date = currentFilters.startDate;
+            requestData.end_date = currentFilters.endDate;
         }
         
-        const response = await fetch('/api/search', {
+        // Call the search API with filters - using /api/query endpoint for chat
+        const response = await fetch('/api/query', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(searchData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
         });
         
         const data = await response.json();
         
-        if (data.success) {
-            displayResults(data.results, data.filters);
-        } else {
-            displayError(data.error || 'Search failed');
+        // Add bot response with sources and confidence
+        let sourcesHtml = '';
+        if (data.sources && data.sources.length > 0) {
+            sourcesHtml = `<div class="sources"><strong>Sources:</strong> ${data.sources.join(', ')}</div>`;
         }
+        
+        // Create results info showing count and active filters
+        const resultsInfo = createResultsInfo(data);
+        
+        chatBox.innerHTML += `
+            <div class="message bot">
+                <strong>ConvoSearch:</strong> ${data.answer}
+                ${sourcesHtml}
+                <div class="sources"><strong>Confidence:</strong> ${(data.confidence * 100).toFixed(1)}%</div>
+                ${resultsInfo}
+            </div>
+        `;
         
     } catch (error) {
         console.error('Search error:', error);
-        displayError('Network error occurred');
-    } finally {
-        showLoading(false);
+        chatBox.innerHTML += `<div class="message bot"><strong>Error:</strong> Failed to get response</div>`;
+    }
+    
+    // Scroll to bottom to show latest message
+    chatBox.scrollTop = chatBox.scrollHeight;
+    showLoading(false);
+}
+
+// Show loading state during API calls
+function showLoading(show) {
+    // You could add a loading spinner here if needed
+    const chatBox = document.getElementById('chatBox');
+    if (show) {
+        // Add loading message
+        chatBox.innerHTML += `<div class="message bot"><strong>ConvoSearch:</strong> Searching...</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
 }
 
-// Update the displayResults function
-function displayResults(results, filters) {
-    const resultsContainer = document.getElementById('resultsContainer');
+// Create results information display showing count and active filters
+function createResultsInfo(data) {
+    const hasActiveFilters = currentFilters.category !== 'all' || currentFilters.date !== 'all';
     
-    // Create results info header
-    const resultsInfo = createResultsInfo(results, filters);
+    // Only show filter info if filters are active
+    if (!hasActiveFilters) return '';
     
-    resultsContainer.innerHTML = resultsInfo + formatResults(results);
-}
-
-// Create results information header
-function createResultsInfo(results, filters) {
-    const resultsCount = results.length;
-    const hasActiveFilters = filters.category !== 'all' || filters.date !== 'all';
+    let infoHTML = `<div class="results-info">`;
     
-    let infoHTML = `<div class="results-info">
-        <span class="results-count">${resultsCount} result${resultsCount !== 1 ? 's' : ''} found</span>`;
-    
-    // Show active filters if any
-    if (hasActiveFilters) {
-        let filterText = [];
-        if (filters.category !== 'all') {
-            filterText.push(`Category: ${filters.category}`);
-        }
-        if (filters.date !== 'all') {
-            filterText.push(`Date: ${filters.date}`);
-        }
-        
-        infoHTML += `<span class="filter-indicator">(Filtered by: ${filterText.join(', ')})</span>`;
-        infoHTML += `<button onclick="clearFilters()" class="clear-filters-btn">Clear Filters</button>`;
+    // Show active filters
+    let filterText = [];
+    if (currentFilters.category !== 'all') {
+        filterText.push(`Category: ${currentFilters.category}`);
+    }
+    if (currentFilters.date !== 'all') {
+        filterText.push(`Date: ${currentFilters.date}`);
     }
     
+    infoHTML += `<span class="results-count">Filtered results</span>`;
+    infoHTML += `<span class="filter-indicator">(${filterText.join(', ')})</span>`;
+    infoHTML += `<button onclick="clearAllFilters()" class="clear-filters-btn">Clear Filters</button>`;
     infoHTML += `</div>`;
+    
     return infoHTML;
 }
 
-// Keep your existing clearFilters function
-function clearFilters() {
-    document.getElementById('categoryFilter').value = 'all';
-    document.getElementById('dateFilter').value = 'all';
-    document.getElementById('customDateRange').style.display = 'none';
-    document.getElementById('startDate').value = '';
-    document.getElementById('endDate').value = '';
+// Clear all filters and reset to default state
+function clearAllFilters() {
+    const categoryFilter = document.getElementById('categoryFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    const customDateRange = document.getElementById('customDateRange');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
     
+    if (categoryFilter) categoryFilter.value = 'all';
+    if (dateFilter) dateFilter.value = 'all';
+    if (customDateRange) customDateRange.style.display = 'none';
+    if (startDate) startDate.value = '';
+    if (endDate) endDate.value = '';
+    
+    // Reset filter state
     currentFilters = {
         category: 'all',
         date: 'all',
@@ -191,44 +252,32 @@ function clearFilters() {
         endDate: null
     };
     
-    // Re-run search if there's a current query
-    const currentQuery = document.getElementById('searchInput').value;
-    if (currentQuery.trim()) {
-        performSearch(currentQuery);
+    // Re-run search if there's a current question
+    const currentQuestion = document.getElementById('questionInput').value;
+    if (currentQuestion && currentQuestion.trim()) {
+        askQuestion();
     }
     
     updateFilterUI();
-}
-function createFilterSummary(filters) {
-    let summary = '';
-    
-    if (filters.category !== 'all' || filters.date !== 'all') {
-        summary = `<div class="filter-summary">
-            <strong>Active Filters:</strong> 
-            ${filters.category !== 'all' ? `Category: ${filters.category}` : ''}
-            ${filters.date !== 'all' ? `Date: ${filters.date}` : ''}
-            <button onclick="clearFilters()" class="clear-filters-btn">Clear All</button>
-        </div>`;
-    }
-    
-    return summary;
 }
 
-// Clear all filters
-function clearFilters() {
-    document.getElementById('categoryFilter').value = 'all';
-    document.getElementById('dateFilter').value = 'all';
-    document.getElementById('customDateRange').style.display = 'none';
-    document.getElementById('startDate').value = '';
-    document.getElementById('endDate').value = '';
-    
-    currentFilters = {
-        category: 'all',
-        date: 'all',
-        startDate: null,
-        endDate: null
-    };
-    
-    applyFilters();
-    updateFilterUI();
+// Display error message (helper function)
+function displayError(message) {
+    const chatBox = document.getElementById('chatBox');
+    if (chatBox) {
+        chatBox.innerHTML += `<div class="message bot"><strong>Error:</strong> ${message}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 }
+
+// Allow Enter key to submit questions for better UX
+document.addEventListener('DOMContentLoaded', function() {
+    const questionInput = document.getElementById('questionInput');
+    if (questionInput) {
+        questionInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                askQuestion();
+            }
+        });
+    }
+});
