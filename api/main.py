@@ -45,7 +45,10 @@ async def search_queries(
                 filter_criteria["date_from"] = start_date
             # Add more date filters as needed
         
-        # Use your existing RAG engine with filters
+        <!-- In your results section, make sure you have: -->
+<div id="resultsContainer">
+    <!-- Results info and results will be inserted here by JavaScript -->
+</div>
         results = await rag_engine.search(
             query=query,
             filter_criteria=filter_criteria,
