@@ -11,11 +11,140 @@
         .bot { background: #f5f5f5; margin-right: 50px; }
         .sources { font-size: 12px; color: #666; margin-top: 5px; }
         input, button { padding: 10px; margin: 5px; }
+        
+        /* Search Filters Styles - Added for the new filtering feature */
+        .search-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            font-size: 0.9em;
+            color: #495057;
+            margin-bottom: 2px;
+        }
+        
+        .filter-select, .date-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9em;
+            background: white;
+        }
+        
+        .filter-select:focus, .date-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        .date-input {
+            min-width: 140px;
+        }
+        
+        /* Active filter indicator */
+        .filter-active {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        
+        /* Results Count Display - New feature to show search metadata */
+        .results-info {
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: #e8f4fd;
+            border: 1px solid #b6d7f2;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #055a9c;
+        }
+        
+        .results-count {
+            font-weight: 600;
+        }
+        
+        .filter-indicator {
+            font-size: 0.85em;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .clear-filters-btn {
+            margin-left: 10px;
+            padding: 2px 8px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        
+        .clear-filters-btn:hover {
+            background: #5a6268;
+        }
+        
+        /* Responsive design for mobile */
+        @media (max-width: 768px) {
+            .search-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Knowledge Base Chat</h2>
+        
+        <!-- Search Filters - New feature to filter queries by category and date -->
+        <div class="search-filters">
+            <div class="filter-group">
+                <label for="categoryFilter">Category:</label>
+                <select id="categoryFilter" class="filter-select">
+                    <option value="all">All Categories</option>
+                    <!-- Categories will be loaded dynamically from the backend -->
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="dateFilter">Date:</label>
+                <select id="dateFilter" class="filter-select">
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">Past Week</option>
+                    <option value="month">Past Month</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            
+            <!-- Custom date range input - shown only when custom range is selected -->
+            <div id="customDateRange" class="filter-group" style="display: none;">
+                <label for="startDate">From:</label>
+                <input type="date" id="startDate" class="date-input">
+                <label for="endDate">To:</label>
+                <input type="date" id="endDate" class="date-input">
+            </div>
+        </div>
+        
         <div class="chat-box" id="chatBox">
             <div class="message bot">
                 <strong>ConvoSearch:</strong> Ask me anything about our products and support!
@@ -33,6 +162,122 @@
     </div>
 
     <script>
+        // Filter state management - tracks current filter selections
+        let currentFilters = {
+            category: 'all',
+            date: 'all',
+            startDate: null,
+            endDate: null
+        };
+        
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+        
+        async function initializeApp() {
+            // Load available categories from the backend API
+            await loadCategories();
+            // Set up event listeners for filter interactions
+            setupFilterListeners();
+        }
+        
+        // Fetch available categories from the backend and populate the dropdown
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const categorySelect = document.getElementById('categoryFilter');
+                    // Add categories to the dropdown menu
+                    data.categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        categorySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                // If categories fail to load, the filter will still work with "All Categories"
+            }
+        }
+        
+        // Set up event listeners for filter controls
+        function setupFilterListeners() {
+            const categoryFilter = document.getElementById('categoryFilter');
+            const dateFilter = document.getElementById('dateFilter');
+            const customDateRange = document.getElementById('customDateRange');
+            
+            // Category filter change handler
+            categoryFilter.addEventListener('change', function() {
+                currentFilters.category = this.value;
+                // Apply filters immediately when they change
+                applyFilters();
+            });
+            
+            // Date filter change handler
+            dateFilter.addEventListener('change', function() {
+                currentFilters.date = this.value;
+                
+                // Show custom date range inputs only when custom is selected
+                if (this.value === 'custom') {
+                    customDateRange.style.display = 'flex';
+                } else {
+                    customDateRange.style.display = 'none';
+                    currentFilters.startDate = null;
+                    currentFilters.endDate = null;
+                    // Apply filters immediately for preset date ranges
+                    applyFilters();
+                }
+            });
+            
+            // Custom date range change handlers
+            document.getElementById('startDate').addEventListener('change', updateCustomDate);
+            document.getElementById('endDate').addEventListener('change', updateCustomDate);
+        }
+        
+        // Handle custom date range selection
+        function updateCustomDate() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Only apply filters when both dates are selected
+            if (startDate && endDate) {
+                currentFilters.startDate = startDate;
+                currentFilters.endDate = endDate;
+                applyFilters();
+            }
+        }
+        
+        // Apply current filters to any active search
+        function applyFilters() {
+            // If there's a current question, re-run the search with filters
+            const currentQuestion = document.getElementById('questionInput').value;
+            if (currentQuestion.trim()) {
+                askQuestion();
+            }
+            
+            // Update UI to show active filter state
+            updateFilterUI();
+        }
+        
+        // Update visual indication of active filters
+        function updateFilterUI() {
+            const hasActiveFilters = currentFilters.category !== 'all' || 
+                                    currentFilters.date !== 'all' ||
+                                    currentFilters.startDate !== null;
+            
+            const filterContainer = document.querySelector('.search-filters');
+            if (hasActiveFilters) {
+                filterContainer.classList.add('filter-active');
+            } else {
+                filterContainer.classList.remove('filter-active');
+            }
+        }
+        
+        // Main function to ask questions with filter support
         async function askQuestion() {
             const input = document.getElementById('questionInput');
             const question = input.value.trim();
@@ -40,31 +285,51 @@
             
             const chatBox = document.getElementById('chatBox');
             
-            // Add user message
+            // Add user message to chat
             chatBox.innerHTML += `<div class="message user"><strong>You:</strong> ${question}</div>`;
             input.value = '';
             
-            // Get answer from API
+            // Show loading state
+            showLoading(true);
+            
             try {
+                // Prepare request data with current filters
+                const requestData = {
+                    question: question,
+                    category_filter: currentFilters.category,
+                    date_filter: currentFilters.date
+                };
+                
+                // Add custom date range if selected
+                if (currentFilters.date === 'custom' && currentFilters.startDate && currentFilters.endDate) {
+                    requestData.start_date = currentFilters.startDate;
+                    requestData.end_date = currentFilters.endDate;
+                }
+                
+                // Call the search API with filters
                 const response = await fetch('/api/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const data = await response.json();
                 
-                // Add bot response
+                // Add bot response with sources and confidence
                 let sourcesHtml = '';
                 if (data.sources && data.sources.length > 0) {
                     sourcesHtml = `<div class="sources"><strong>Sources:</strong> ${data.sources.join(', ')}</div>`;
                 }
+                
+                // Create results info showing count and active filters
+                const resultsInfo = createResultsInfo(data);
                 
                 chatBox.innerHTML += `
                     <div class="message bot">
                         <strong>ConvoSearch:</strong> ${data.answer}
                         ${sourcesHtml}
                         <div class="sources"><strong>Confidence:</strong> ${(data.confidence * 100).toFixed(1)}%</div>
+                        ${resultsInfo}
                     </div>
                 `;
                 
@@ -72,44 +337,75 @@
                 chatBox.innerHTML += `<div class="message bot"><strong>Error:</strong> Failed to get response</div>`;
             }
             
+            // Scroll to bottom to show latest message
             chatBox.scrollTop = chatBox.scrollHeight;
+            showLoading(false);
         }
         
-        // Allow Enter key to submit
+        // Show loading state during API calls
+        function showLoading(show) {
+            // You could add a loading spinner here if needed
+            if (show) {
+                console.log('Searching...');
+            }
+        }
+        
+        // Create results information display showing count and active filters
+        function createResultsInfo(data) {
+            const hasResults = data.answer && data.answer !== 'No results found';
+            const hasActiveFilters = currentFilters.category !== 'all' || currentFilters.date !== 'all';
+            
+            if (!hasActiveFilters) return '';
+            
+            let infoHTML = `<div class="results-info">`;
+            
+            // Show active filters
+            let filterText = [];
+            if (currentFilters.category !== 'all') {
+                filterText.push(`Category: ${currentFilters.category}`);
+            }
+            if (currentFilters.date !== 'all') {
+                filterText.push(`Date: ${currentFilters.date}`);
+            }
+            
+            infoHTML += `<span class="filter-indicator">Filtered by: ${filterText.join(', ')}</span>`;
+            infoHTML += `<button onclick="clearFilters()" class="clear-filters-btn">Clear Filters</button>`;
+            infoHTML += `</div>`;
+            
+            return infoHTML;
+        }
+        
+        // Clear all filters and reset to default state
+        function clearFilters() {
+            document.getElementById('categoryFilter').value = 'all';
+            document.getElementById('dateFilter').value = 'all';
+            document.getElementById('customDateRange').style.display = 'none';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            
+            // Reset filter state
+            currentFilters = {
+                category: 'all',
+                date: 'all',
+                startDate: null,
+                endDate: null
+            };
+            
+            // Re-run search if there's a current question
+            const currentQuestion = document.getElementById('questionInput').value;
+            if (currentQuestion.trim()) {
+                askQuestion();
+            }
+            
+            updateFilterUI();
+        }
+        
+        // Allow Enter key to submit questions for better UX
         document.getElementById('questionInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 askQuestion();
             }
         });
-        <!-- Add this section where you want the filters to appear -->
-<div class="search-filters">
-    <div class="filter-group">
-        <label for="categoryFilter">Category:</label>
-        <select id="categoryFilter" class="filter-select">
-            <option value="all">All Categories</option>
-            <!-- Categories will be populated dynamically -->
-        </select>
-    </div>
-    
-    <div class="filter-group">
-        <label for="dateFilter">Date:</label>
-        <select id="dateFilter" class="filter-select">
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">Past Week</option>
-            <option value="month">Past Month</option>
-            <option value="custom">Custom Range</option>
-        </select>
-    </div>
-    
-    <!-- Custom date range (hidden by default) -->
-    <div id="customDateRange" class="filter-group" style="display: none;">
-        <label for="startDate">From:</label>
-        <input type="date" id="startDate" class="date-input">
-        <label for="endDate">To:</label>
-        <input type="date" id="endDate" class="date-input">
-    </div>
-</div>
     </script>
 </body>
 </html>
