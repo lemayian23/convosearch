@@ -140,16 +140,65 @@ async function performSearch(query) {
     }
 }
 
-// Update your results display to show active filters
+// Update the displayResults function
 function displayResults(results, filters) {
     const resultsContainer = document.getElementById('resultsContainer');
     
-    // Create filter summary
-    const filterSummary = createFilterSummary(filters);
+    // Create results info header
+    const resultsInfo = createResultsInfo(results, filters);
     
-    resultsContainer.innerHTML = filterSummary + formatResults(results);
+    resultsContainer.innerHTML = resultsInfo + formatResults(results);
 }
 
+// Create results information header
+function createResultsInfo(results, filters) {
+    const resultsCount = results.length;
+    const hasActiveFilters = filters.category !== 'all' || filters.date !== 'all';
+    
+    let infoHTML = `<div class="results-info">
+        <span class="results-count">${resultsCount} result${resultsCount !== 1 ? 's' : ''} found</span>`;
+    
+    // Show active filters if any
+    if (hasActiveFilters) {
+        let filterText = [];
+        if (filters.category !== 'all') {
+            filterText.push(`Category: ${filters.category}`);
+        }
+        if (filters.date !== 'all') {
+            filterText.push(`Date: ${filters.date}`);
+        }
+        
+        infoHTML += `<span class="filter-indicator">(Filtered by: ${filterText.join(', ')})</span>`;
+        infoHTML += `<button onclick="clearFilters()" class="clear-filters-btn">Clear Filters</button>`;
+    }
+    
+    infoHTML += `</div>`;
+    return infoHTML;
+}
+
+// Keep your existing clearFilters function
+function clearFilters() {
+    document.getElementById('categoryFilter').value = 'all';
+    document.getElementById('dateFilter').value = 'all';
+    document.getElementById('customDateRange').style.display = 'none';
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+    
+    currentFilters = {
+        category: 'all',
+        date: 'all',
+        startDate: null,
+        endDate: null
+    };
+    
+    // Re-run search if there's a current query
+    const currentQuery = document.getElementById('searchInput').value;
+    if (currentQuery.trim()) {
+        performSearch(currentQuery);
+    }
+    
+    updateFilterUI();
+}
 function createFilterSummary(filters) {
     let summary = '';
     
