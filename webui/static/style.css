@@ -292,3 +292,38 @@ button:disabled {
         height: 300px;
     }
 }
+/* Results Count Display */
+.results-info {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #e8f4fd;
+    border: 1px solid #b6d7f2;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #055a9c;
+}
+
+.results-count {
+    font-weight: 600;
+}
+
+.filter-indicator {
+    font-size: 0.85em;
+    color: #666;
+    margin-left: 10px;
+}
+
+.clear-filters-btn {
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.clear-filters-btn:hover {
+    background: #5a6268;
+}
