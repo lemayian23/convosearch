@@ -112,6 +112,14 @@
     </style>
 </head>
 <body>
+
+    <!-- Quick Questions Section - Help users get started with common queries -->
+<div class="quick-questions">
+    <h3>💡 Quick Questions</h3>
+    <div class="questions-grid" id="questionsGrid">
+        <!-- Questions will be loaded dynamically -->
+    </div>
+</div>
     <div class="container">
         <h2>Knowledge Base Chat</h2>
         
@@ -405,6 +413,77 @@
             if (e.key === 'Enter') {
                 askQuestion();
             }
+
+            // Quick questions data - you can expand this based on your knowledge base
+const quickQuestions = [
+    "What are our most common support issues?",
+    "How do I reset a user password?",
+    "What's the refund policy?",
+    "How to troubleshoot login problems?",
+    "Where can I find documentation?",
+    "What are the system requirements?",
+    "How to contact customer support?",
+    "What's the latest product update?",
+    "How to backup my data?",
+    "Troubleshoot performance issues"
+];
+
+// Initialize quick questions when page loads
+function initializeQuickQuestions() {
+    const questionsGrid = document.getElementById('questionsGrid');
+    
+    if (!questionsGrid) {
+        console.log('Quick questions container not found');
+        return;
+    }
+    
+    // Clear any existing content
+    questionsGrid.innerHTML = '';
+    
+    // Create question chips
+    quickQuestions.forEach(question => {
+        const chip = document.createElement('button');
+        chip.className = 'question-chip';
+        chip.textContent = question;
+        chip.type = 'button'; // Prevent form submission
+        
+        chip.addEventListener('click', () => {
+            askQuickQuestion(question, chip);
+        });
+        
+        questionsGrid.appendChild(chip);
+    });
+}
+
+// Handle quick question clicks
+function askQuickQuestion(question, chipElement) {
+    // Add loading state to the clicked chip
+    chipElement.classList.add('loading-question');
+    
+    // Set the question in the input field
+    const questionInput = document.getElementById('questionInput');
+    if (questionInput) {
+        questionInput.value = question;
+        questionInput.focus();
+    }
+    
+    // Trigger the search after a brief delay for better UX
+    setTimeout(() => {
+        askQuestion();
+        
+        // Remove loading state after a delay
+        setTimeout(() => {
+            chipElement.classList.remove('loading-question');
+        }, 2000);
+    }, 300);
+}
+
+// Update your existing initializeApp function to include quick questions
+async function initializeApp() {
+    await loadCategories();
+    setupFilterListeners();
+    initializeQuickQuestions(); // Add this line
+}
         });
     </script>
 </body>
