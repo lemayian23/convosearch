@@ -9,12 +9,45 @@ from typing import List, Optional
 import uvicorn
 import os
 import sys
-
-# Add these imports at the top if not already present
 from datetime import datetime
 from typing import Optional, List
 
-# Update your existing search endpoint or add a new one
+
+@app.get("/api/quick-questions")
+async def get_quick_questions():
+    """
+    Get frequently asked questions or common queries
+    """
+    try:
+        # We can make this dynamic by analyzing your actual data
+        # For now, returning static questions that work for most knowledge bases
+        common_questions = [
+            "What are the most common issues reported?",
+            "How do I reset passwords?",
+            "What is the refund policy?",
+            "How to troubleshoot connectivity problems?",
+            "Where can I find user documentation?",
+            "What are the system requirements?",
+            "How to contact customer support?",
+            "What's new in the latest update?",
+            "How to backup and restore data?",
+            "How to improve system performance?"
+        ]
+        
+        return {
+            "success": True,
+            "questions": common_questions
+        }
+        
+    except Exception as e:
+        logger.error(f"Quick questions error: {str(e)}")
+        return {
+            "success": False,
+            "questions": [],
+            "error": str(e)
+        }
+
+# Update of existing search endpoint or add a new one
 @app.post("/api/search")
 async def search_queries(
     query: str = Body(..., embed=True),
