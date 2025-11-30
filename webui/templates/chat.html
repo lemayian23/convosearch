@@ -216,6 +216,12 @@
             // Set up event listeners for filter interactions
             setupFilterListeners();
         }
+        async function initializeApp() {
+    await loadCategories();
+    setupFilterListeners();
+    initializeQuickQuestions();
+    initializeSearchHistory(); // ADD THIS LINE
+}
         
         // Fetch available categories from the backend and populate the dropdown
         async function loadCategories() {
