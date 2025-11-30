@@ -359,6 +359,39 @@
             chatBox.scrollTop = chatBox.scrollHeight;
             showLoading(false);
         }
+
+        async function askQuestion() {
+    const input = document.getElementById('questionInput');
+    const question = input.value.trim();
+    if (!question) return;
+    
+    const chatBox = document.getElementById('chatBox');
+    
+    // Add user message to chat
+    chatBox.innerHTML += `<div class="message user"><strong>You:</strong> ${question}</div>`;
+    
+    // Show loading state
+    showLoading(true);
+    
+    try {
+        // ... your existing API call code ...
+        
+        // AFTER SUCCESSFUL SEARCH - Add to history
+        saveToSearchHistory(question, {
+            category: currentFilters.category,
+            date: currentFilters.date
+        });
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        chatBox.innerHTML += `<div class="message bot"><strong>Error:</strong> Failed to get response</div>`;
+    }
+    
+    // Scroll to bottom and clear input
+    chatBox.scrollTop = chatBox.scrollHeight;
+    input.value = ''; // Clear input AFTER saving to history
+    showLoading(false);
+}
         
         // Show loading state during API calls
         function showLoading(show) {
