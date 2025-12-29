@@ -115,9 +115,9 @@ def main():
 
     if all([health_ok, api_ok, web_ok]):
         print("\n🎉 ALL TESTS PASSED! ConvoSearch is working correctly.")
-        print("\n🌐 Access your application at: http://localhost:8000")
+        print("\n🌐 Access your application at: http://localhost IP- Address")
     else:
-        print("\n❌ SOME TESTS FAILED. Please check the logs above.")
+        print("\n❌ SOME TESTS FAILED. Please check the logs above for more details.")
         sys.exit(1)
 
 
