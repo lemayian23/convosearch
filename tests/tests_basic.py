@@ -99,7 +99,7 @@ def main():
     print("=" * 50)
 
     # Wait a bit for services to start
-    print("Waiting for services to start...")
+    print("Waiting for services to start in a few...")
     time.sleep(10)
 
     # Run tests
